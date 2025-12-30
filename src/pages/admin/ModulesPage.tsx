@@ -3,6 +3,7 @@ import { BookOpen, Plus, Search, MoreHorizontal, Clock, GraduationCap, Edit, Tra
 import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { StatusBadge } from '@/components/admin/StatusBadge';
+import { ModuleFormModal } from '@/components/admin/ModuleFormModal';
 import { mockModules } from '@/data/mockData';
 import { Module } from '@/types/admin';
 import { Input } from '@/components/ui/input';
@@ -25,10 +26,56 @@ const difficultyColors = {
 export default function ModulesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [modules, setModules] = useState(mockModules);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingModule, setEditingModule] = useState<Module | null>(null);
 
   const filteredModules = modules.filter((module) =>
     module.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleAddModule = () => {
+    setEditingModule(null);
+    setModalOpen(true);
+  };
+
+  const handleEditModule = (module: Module) => {
+    setEditingModule(module);
+    setModalOpen(true);
+  };
+
+  const handleSubmit = (data: { 
+    id?: string; 
+    title: string; 
+    description: string; 
+    order: number; 
+    status: 'draft' | 'published' | 'archived'; 
+    difficulty: 'beginner' | 'intermediate' | 'advanced'; 
+    duration: string;
+  }) => {
+    if (data.id) {
+      setModules(modules.map((m) => 
+        m.id === data.id 
+          ? { ...m, ...data, updatedAt: new Date() }
+          : m
+      ));
+      toast.success(`${data.title} has been updated`);
+    } else {
+      const newModule: Module = {
+        id: crypto.randomUUID(),
+        title: data.title,
+        description: data.description,
+        order: data.order,
+        status: data.status,
+        difficulty: data.difficulty,
+        duration: data.duration,
+        lessonsCount: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      setModules([...modules, newModule]);
+      toast.success(`${data.title} has been created`);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -38,7 +85,7 @@ export default function ModulesPage() {
         icon={BookOpen}
         action={{
           label: 'Create Module',
-          onClick: () => toast.success('Create module modal would open here'),
+          onClick: handleAddModule,
           icon: Plus,
         }}
       />
@@ -94,7 +141,7 @@ export default function ModulesPage() {
                     <Eye className="mr-2 h-4 w-4" />
                     View Module
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => toast.success(`Editing ${module.title}`)}>
+                  <DropdownMenuItem onClick={() => handleEditModule(module)}>
                     <Edit className="mr-2 h-4 w-4" />
                     Edit Module
                   </DropdownMenuItem>
@@ -164,6 +211,14 @@ export default function ModulesPage() {
           </p>
         </motion.div>
       )}
+
+      {/* Module Form Modal */}
+      <ModuleFormModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        module={editingModule}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { DataTable } from '@/components/admin/DataTable';
+import { LessonFormModal } from '@/components/admin/LessonFormModal';
 import { mockLessons, mockModules } from '@/data/mockData';
 import { Lesson } from '@/types/admin';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,9 @@ export default function LessonsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedModule, setSelectedModule] = useState<string>('all');
   const [lessons, setLessons] = useState(mockLessons);
+  const [modules] = useState(mockModules);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
 
   const filteredLessons = lessons.filter((lesson) => {
     const matchesSearch = lesson.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -49,7 +53,52 @@ export default function LessonsPage() {
   });
 
   const getModuleTitle = (moduleId: string) => {
-    return mockModules.find((m) => m.id === moduleId)?.title || 'Unknown Module';
+    return modules.find((m) => m.id === moduleId)?.title || 'Unknown Module';
+  };
+
+  const handleAddLesson = () => {
+    setEditingLesson(null);
+    setModalOpen(true);
+  };
+
+  const handleEditLesson = (lesson: Lesson) => {
+    setEditingLesson(lesson);
+    setModalOpen(true);
+  };
+
+  const handleSubmit = (data: { 
+    id?: string; 
+    title: string; 
+    content: string; 
+    moduleId: string;
+    order: number; 
+    type: 'video' | 'text' | 'quiz' | 'exercise'; 
+    status: 'draft' | 'published'; 
+    duration: string;
+  }) => {
+    if (data.id) {
+      setLessons(lessons.map((l) => 
+        l.id === data.id 
+          ? { ...l, ...data, updatedAt: new Date() }
+          : l
+      ));
+      toast.success(`${data.title} has been updated`);
+    } else {
+      const newLesson: Lesson = {
+        id: crypto.randomUUID(),
+        title: data.title,
+        content: data.content,
+        moduleId: data.moduleId,
+        order: data.order,
+        type: data.type,
+        status: data.status,
+        duration: data.duration,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      setLessons([...lessons, newLesson]);
+      toast.success(`${data.title} has been created`);
+    }
   };
 
   const columns = [
@@ -124,7 +173,7 @@ export default function LessonsPage() {
               <Eye className="mr-2 h-4 w-4" />
               Preview Lesson
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => toast.success(`Editing ${lesson.title}`)}>
+            <DropdownMenuItem onClick={() => handleEditLesson(lesson)}>
               <Edit className="mr-2 h-4 w-4" />
               Edit Lesson
             </DropdownMenuItem>
@@ -152,7 +201,7 @@ export default function LessonsPage() {
         icon={GraduationCap}
         action={{
           label: 'Create Lesson',
-          onClick: () => toast.success('Create lesson modal would open here'),
+          onClick: handleAddLesson,
           icon: Plus,
         }}
       />
@@ -180,7 +229,7 @@ export default function LessonsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Modules</SelectItem>
-              {mockModules.map((module) => (
+              {modules.map((module) => (
                 <SelectItem key={module.id} value={module.id}>
                   {module.title}
                 </SelectItem>
@@ -225,6 +274,15 @@ export default function LessonsPage() {
           </span>
         </div>
       </motion.div>
+
+      {/* Lesson Form Modal */}
+      <LessonFormModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        lesson={editingLesson}
+        modules={modules}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }

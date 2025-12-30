@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge } from '@/components/admin/StatusBadge';
+import { UserFormModal } from '@/components/admin/UserFormModal';
 import { mockUsers } from '@/data/mockData';
 import { User } from '@/types/admin';
 import { Input } from '@/components/ui/input';
@@ -19,12 +20,48 @@ import { toast } from 'sonner';
 export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState(mockUsers);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
   const filteredUsers = users.filter(
     (user) =>
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleAddUser = () => {
+    setEditingUser(null);
+    setModalOpen(true);
+  };
+
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    setModalOpen(true);
+  };
+
+  const handleSubmit = (data: { id?: string; name: string; email: string; role: 'admin' | 'instructor' | 'student'; status: 'active' | 'inactive' | 'suspended' }) => {
+    if (data.id) {
+      setUsers(users.map((u) => 
+        u.id === data.id 
+          ? { ...u, name: data.name, email: data.email, role: data.role, status: data.status }
+          : u
+      ));
+      toast.success(`${data.name} has been updated`);
+    } else {
+      const newUser: User = {
+        id: crypto.randomUUID(),
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        status: data.status,
+        createdAt: new Date(),
+        completedModules: 0,
+        totalModules: 10,
+      };
+      setUsers([...users, newUser]);
+      toast.success(`${data.name} has been added`);
+    }
+  };
 
   const columns = [
     {
@@ -106,7 +143,7 @@ export default function UsersPage() {
             <DropdownMenuItem onClick={() => toast.success(`Viewing ${user.name}'s profile`)}>
               View Profile
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => toast.success(`Editing ${user.name}`)}>
+            <DropdownMenuItem onClick={() => handleEditUser(user)}>
               Edit User
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => toast.success(`Email sent to ${user.email}`)}>
@@ -136,7 +173,7 @@ export default function UsersPage() {
         icon={Users}
         action={{
           label: 'Add User',
-          onClick: () => toast.success('Add user modal would open here'),
+          onClick: handleAddUser,
           icon: Plus,
         }}
       />
@@ -189,6 +226,14 @@ export default function UsersPage() {
           </Button>
         </div>
       </motion.div>
+
+      {/* User Form Modal */}
+      <UserFormModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        user={editingUser}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }
